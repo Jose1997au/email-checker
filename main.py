@@ -1,6 +1,8 @@
 from classes.email_reader import EmailReader
 from classes.email_sender import EmailSender
+from dateutil.parser import parse
 from classes.setup import Setup
+import re
 
 commands = {
     "-scan": {
@@ -152,7 +154,13 @@ while True:
         reply_email = sender.create_email()
 
         original_sender = original_email.get('From')
-        reply_email.add_recipient(original_sender, type="to")
+        string_pool = original_sender.split()
+        for string in string_pool:
+            print(string)
+            if "<" in string and ">" in string:
+                print("Hello")
+                original_sender = re.sub(r'[<>]', '', string)
+        reply_email.add_recipient([original_sender], type="to")
 
         if original_email.get('Cc'):
             original_cc = original_email.get('Cc').split(',')
@@ -162,15 +170,14 @@ while True:
         reply_subject = "Re: " + original_email.get('Subject', '')
         reply_email.add_subject(reply_subject)
 
-        print("Enter your reply (type 'END' on a new line to finish):")
+        print("Enter content (type 'END' on a new line to finish):")
         lines = []
         while True:
             line = input()
             if line.strip() == 'END':
                 break  # Stop the loop if the user types 'END'
             lines.append(line)
-        
-        # Join the lines into a single string with line breaks
+
         user_reply_content = '\n'.join(lines)
 
         original_body = ""
@@ -182,8 +189,15 @@ while True:
         else:
             original_body = original_email.get_payload(decode=True).decode('utf-8')
 
-        quoted_content = f"\n\n--- Original Message ---\n{original_body}"
+        original_date = original_email.get('Date', '')
+        parsed_date = parse(original_date)
+        formatted_date = parsed_date.strftime('%a, %b %d, %Y at %I:%M %p')
+
+        quoted_content = f"\n\nOn {formatted_date} <{original_sender}> wrote:\n{original_body}"
+        indented_original_body = '\n'.join(['    ' + line for line in original_body.split('\n')])
+        quoted_content = f"\n\nOn {formatted_date}, {original_sender} wrote:\n{indented_original_body}"
         full_reply_content = user_reply_content + quoted_content
+
         reply_email.add_content(full_reply_content)
 
         try:
@@ -217,7 +231,7 @@ while True:
         a.clear()
     elif command == "-changepassword":
         while True:
-            new_password = input("Enter your new email: ")
+            new_password = input("Enter your new password: ")
             is_valid = reader.verify(new_email)
             if is_valid:
                 break
