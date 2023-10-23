@@ -156,9 +156,7 @@ while True:
         original_sender = original_email.get('From')
         string_pool = original_sender.split()
         for string in string_pool:
-            print(string)
             if "<" in string and ">" in string:
-                print("Hello")
                 original_sender = re.sub(r'[<>]', '', string)
         reply_email.add_recipient([original_sender], type="to")
 
