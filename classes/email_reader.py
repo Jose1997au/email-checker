@@ -15,29 +15,34 @@ class EmailReader():
             print("Error: ", e)
 
     def find_email_from(self, email_from):
+        found = False
         yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
         date_str = yesterday.strftime("%d-%b-%Y")
 
         try:
             # Search for emails since yesterday
-            _, data = self.imap.search(None, '(SINCE {date})'.format(date=date_str))
+            _, data = self.imap.uid('search', None, '(SINCE {date})'.format(date=date_str))
 
-            msgnums = list(map(int, data[0].split()))
-            msgnums.reverse()
+            # Keep uid_list as a list of bytes
+            uid_list = data[0].split()
+            uid_list.reverse()  # if you want the latest emails first
 
-            for msgnum in msgnums:
-                result, data = self.imap.fetch(str(msgnum), "(RFC822)")  # the message number must be converted to string
+            for email_uid in uid_list:
+
+                str_email_uid = email_uid.decode('utf-8')
+
+                result, email_data = self.imap.uid('fetch', str_email_uid, '(RFC822)')
                 if result != 'OK':
-                    print(f"Error fetching message {msgnum}")
+                    print(f"Error fetching email with UID: {str_email_uid}")
                     continue
 
-                message = email.message_from_bytes(data[0][1])  # parse the email
+                raw_email = email_data[0][1]
+                message = email.message_from_bytes(raw_email)
 
-                print(f"UID: {msgnum}")
                 if email_from.lower() in message.get('From').lower():
+                    found = True
                     print("Message found.")
-                    print(f"UID: {msgnum}")  # msgnum is an integer, no need to decode
-                    print(f"Message Number: {msgnum}")
+                    print(f"UID: {str_email_uid}")
                     print(f"From: {message.get('From')}")
                     print(f"To: {message.get('To')}")
                     print(f"BCC: {message.get('BCC')}")
@@ -46,11 +51,13 @@ class EmailReader():
                     print("Content: ")
                     for part in message.walk():
                         if part.get_content_type() == "text/plain":
-                            print(part.get_payload(decode=True).decode('utf-8'))  # decode the byte content to string
-                    break  # stop after finding the first (latest) email from the specified sender
+                            print(part.get_payload(decode=True).decode('utf-8'))  
+                    break 
         except imaplib.IMAP4.error as e:
             print('An error occurred: ', e)
             
+        return found
+
     def verify(self, email):
         while True:
 
@@ -66,9 +73,6 @@ class EmailReader():
         
     def get_email_by_uid(self, email_uid):
         try:
-            print(email_uid)
-            email_uid = str(int(email_uid) + 1)
-            print(email_uid)
             _, email_data = self.imap.uid('fetch', email_uid, '(RFC822)')
             raw_email = email_data[0][1]
             message = email.message_from_bytes(raw_email)

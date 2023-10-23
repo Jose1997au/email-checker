@@ -11,16 +11,13 @@ class Email():
         self.subject = ""
         self.content = ""
 
-    def add_recipient(self, *args, type):
+    def add_recipient(self, recipients, type):
         if type == "to":
-            for contact in args:
-                self.recipient_to.append(contact)
+            self.recipient_to.extend(recipients)
         elif type == "cc":
-            for contact in args:
-                self.recipient_cc.append(contact)
+            self.recipient_cc.extend(recipients)
         elif type == "bcc":
-            for contact in args:
-                self.recipient_bcc.append(contact)
+            self.recipient_bcc.extend(recipients)
 
     def add_subject(self, subject):
         self.subject = subject

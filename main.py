@@ -9,15 +9,19 @@ commands = {
     },
     "-sendEmail": {
         "desc": "Sends an email to a specific person.",
-        "args": "Email"
+        "args": "Email-Content"
     },
     "-reply": {
         "desc": "Replies to an email.",
-        "args": "Email ID"
+        "args": "UID, Content"
     },
     "-showEmail": {
         "desc": "Shows email with given UID.",
-        "args": "Email ID"
+        "args": "UID"
+    },
+    "-printCredentials": {
+        "desc": "Prints your email and password for you to see.",
+        "args": "None"
     },
     "-changeEmail": {
         "desc": "Changes email for if you typed it incorrectly.",
@@ -27,6 +31,10 @@ commands = {
         "desc": "Changes password for if you typed it incorrectly.",
         "args": "Password"
     },
+    "-clear": {
+        "desc": "Clears the terminal.",
+        "args": "None"
+    }
 }
 
 def print_cmds():
@@ -57,10 +65,9 @@ sender = EmailSender(user)
 
 while True:
     print_cmds()
-    command = input("Command Line: ")
+    command = input("Command Line: ").strip().lower()
     a.clear()
     print_cmds()
-    command.lower().strip()
 
     if command == "-scan":
         while True:
@@ -70,8 +77,10 @@ while True:
             if not is_valid: continue
             break
         print("Fetching emails...")
-        reader.find_email_from(target)
-    elif command == "-sendEmail":
+        found = reader.find_email_from(target)
+        if not found:
+            print(f"Could not find emails from {target} within the last 24 hours.")
+    elif command == "-sendemail":
         new_email = sender.create_email()
         while True:
             free_to_go = True
@@ -110,7 +119,17 @@ while True:
                 break
 
         subject = input("Enter a subject: ")
-        content = input("Enter content: ")
+        print("Enter content (type 'END' on a new line to finish):")
+        lines = []
+        while True:
+            line = input()
+            if line.strip() == 'END':
+                break  # Stop the loop if the user types 'END'
+            lines.append(line)
+        
+        # Join the lines into a single string with line breaks
+        content = '\n'.join(lines)
+
 
         new_email.add_recipient(recipients, "to")
         new_email.add_recipient(recipients_cc, "cc")
@@ -143,7 +162,16 @@ while True:
         reply_subject = "Re: " + original_email.get('Subject', '')
         reply_email.add_subject(reply_subject)
 
-        user_reply_content = input("Enter your reply: ")
+        print("Enter your reply (type 'END' on a new line to finish):")
+        lines = []
+        while True:
+            line = input()
+            if line.strip() == 'END':
+                break  # Stop the loop if the user types 'END'
+            lines.append(line)
+        
+        # Join the lines into a single string with line breaks
+        user_reply_content = '\n'.join(lines)
 
         original_body = ""
         if original_email.is_multipart():
@@ -163,9 +191,39 @@ while True:
             print("Reply sent!")
         except Exception as e:
             print(f"An error occurred: {e}")
-    elif command == "-showEmail":
+    elif command == "-showemail":
         email_uid = input("Enter the UID of the email you want to reply to: ")
         a.clear()
 
         original_emai1l = reader.get_email_by_uid(email_uid)
         print(original_emai1l)
+    elif command == "-printcredentials":
+        with open('login-info.txt', 'r') as file:
+            lines = file.readlines()
+            
+        a.clear()
+        print(f"Email: {lines[0]}")
+        print(f"Password: {lines[1]}")
+    elif command == "-changeemail":
+        while True:
+            new_email = input("Enter your new email: ")
+            is_valid = reader.verify(new_email)
+            if is_valid:
+                break
+            with open('login-info.txt', 'r+') as file:
+                lines = file.readlines()
+                lines[0] = new_email
+                file.writelines(lines)
+        a.clear()
+    elif command == "-changepassword":
+        while True:
+            new_password = input("Enter your new email: ")
+            is_valid = reader.verify(new_email)
+            if is_valid:
+                break
+            with open('login-info.txt', 'r+') as file:
+                lines = file.readlines()
+                lines[0] = new_password
+                file.writelines(lines)
+    elif command == "-clear":
+        a.clear()
